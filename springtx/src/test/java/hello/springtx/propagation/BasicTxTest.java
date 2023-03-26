@@ -100,8 +100,23 @@ public class BasicTxTest {
 
         log.info("외부 트랜잭션 커밋");
         txManger.commit(outer); // 커밋 실행 O
-
     }
+
+    @Test
+    void outer_commit() {
+        log.info("외부 트랜잭션 시작");
+        TransactionStatus outer = txManger.getTransaction(new DefaultTransactionAttribute());
+        // 새로운 트랜잭션 여부 확인
+        log.info("outer.isNewTransaction()={}", outer.isNewTransaction()); // true
+
+        // Option + Commend + M : 메소드 생성
+        // Shift + F6 : 메소드 이름 변경
+        inner();
+
+        log.info("외부 트랜잭션 롤백");
+        txManger.rollback(outer); // 롤백 실행 O
+    }
+
 
     private void inner() {
         log.info("내부 트랜잭션 시작");
