@@ -82,4 +82,33 @@ public class BasicTxTest {
         txManger.rollback(tx2);
     }
 
+
+    /**
+     * 처음 트랜잭션을 시작한 외부 트랜잭션이 실제 물리 트랜잭션을 관리
+     * outer 트랜잭션이 inner 트랜잭션을 관리
+     * */
+    @Test
+    void inner_commit() {
+        log.info("외부 트랜잭션 시작");
+        TransactionStatus outer = txManger.getTransaction(new DefaultTransactionAttribute());
+        // 새로운 트랜잭션 여부 확인
+        log.info("outer.isNewTransaction()={}", outer.isNewTransaction()); // true
+
+        // Option + Commend + M : 메소드 생성
+        // Shift + F6 : 메소드 이름 변경
+        inner();
+
+        log.info("외부 트랜잭션 커밋");
+        txManger.commit(outer); // 커밋 실행 O
+
+    }
+
+    private void inner() {
+        log.info("내부 트랜잭션 시작");
+        TransactionStatus inner = txManger.getTransaction(new DefaultTransactionAttribute());
+        // 새로운 트랜잭션 여부 확인
+        log.info("inner.isNewTransaction()={}", inner.isNewTransaction()); // false
+        log.info("내부 트랜잭션 커밋");
+        txManger.commit(inner); // 커밋 실행 X
+    }
 }
