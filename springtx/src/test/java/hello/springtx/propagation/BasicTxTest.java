@@ -1,6 +1,7 @@
 package hello.springtx.propagation;
 
 import lombok.extern.slf4j.Slf4j;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,9 +10,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.transaction.interceptor.DefaultTransactionAttribute;
 
 import javax.sql.DataSource;
+
+import static org.assertj.core.api.Assertions.*;
 
 @Slf4j
 @SpringBootTest
@@ -96,14 +100,14 @@ public class BasicTxTest {
 
         // Option + Commend + M : 메소드 생성
         // Shift + F6 : 메소드 이름 변경
-        inner();
+        innerCommit();
 
         log.info("외부 트랜잭션 커밋");
         txManger.commit(outer); // 커밋 실행 O
     }
 
     @Test
-    void outer_commit() {
+    void outer_rollback() {
         log.info("외부 트랜잭션 시작");
         TransactionStatus outer = txManger.getTransaction(new DefaultTransactionAttribute());
         // 새로운 트랜잭션 여부 확인
@@ -111,19 +115,46 @@ public class BasicTxTest {
 
         // Option + Commend + M : 메소드 생성
         // Shift + F6 : 메소드 이름 변경
-        inner();
+        innerCommit();
 
         log.info("외부 트랜잭션 롤백");
         txManger.rollback(outer); // 롤백 실행 O
     }
 
+    @Test
+    void inner_rollback() {
+        log.info("외부 트랜잭션 시작");
+        TransactionStatus outer = txManger.getTransaction(new DefaultTransactionAttribute());
+        // 새로운 트랜잭션 여부 확인
+        log.info("outer.isNewTransaction()={}", outer.isNewTransaction()); // true
 
-    private void inner() {
+        // Transaction rolled back because it has been marked as rollback-only
+        // 내부 트랜잭션을 롤백하면 실제 물리 트랜잭션은 롤백하지 않는다.
+        // 트랜잭션 동기화 매니저에 rollbackOnly=true 설정이 필요하다.
+        // 스프링에서는 UnexpectedRollbackException 런타임 예외를 던진다.
+        innerRollback();
+
+        log.info("외부 트랜잭션 커밋");
+        assertThatThrownBy(() -> txManger.commit(outer))
+                .isInstanceOf(UnexpectedRollbackException.class);
+    }
+
+
+    private void innerCommit() {
         log.info("내부 트랜잭션 시작");
         TransactionStatus inner = txManger.getTransaction(new DefaultTransactionAttribute());
         // 새로운 트랜잭션 여부 확인
         log.info("inner.isNewTransaction()={}", inner.isNewTransaction()); // false
         log.info("내부 트랜잭션 커밋");
         txManger.commit(inner); // 커밋 실행 X
+    }
+
+    private void innerRollback() {
+        log.info("내부 트랜잭션 시작");
+        TransactionStatus inner = txManger.getTransaction(new DefaultTransactionAttribute());
+        // 새로운 트랜잭션 여부 확인
+        log.info("inner.isNewTransaction()={}", inner.isNewTransaction()); // false
+        log.info("내부 트랜잭션 롤백");
+        txManger.rollback(inner); // 커밋 실행 X
     }
 }
