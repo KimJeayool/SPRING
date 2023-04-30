@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.UnexpectedRollbackException;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -111,5 +112,44 @@ class MemberServiceTest {
         // When: 모든 데이터가 정상 Rollback.
         assertTrue(memberRepository.find(username).isEmpty());   // Rollback
         assertTrue(logRepository.find(username).isEmpty());      // Rollback
+    }
+
+
+    /**
+     * memberService        @Transactional : ON
+     * memberRepository     @Transactional : ON
+     * logRepository        @Transactional : ON -> Exception
+     * */
+    @Test
+    void recoverException_fail() {
+        // given
+        String username = "recoverException_fail";
+
+        // When
+        assertThatThrownBy(() -> memberService.joinV2(username))
+                .isInstanceOf(UnexpectedRollbackException.class);
+
+        // When: 모든 데이터가 정상 Rollback.
+        assertTrue(memberRepository.find(username).isEmpty());
+        assertTrue(logRepository.find(username).isEmpty());
+    }
+
+
+    /**
+     * memberService        @Transactional : ON
+     * memberRepository     @Transactional : ON
+     * logRepository        @Transactional : ON(REQUIRES_NEW) -> Exception
+     * */
+    @Test
+    void recoverException_success() {
+        // given
+        String username = "recoverException_success";
+
+        // When
+        memberService.joinV2(username);
+
+        // When: member Commit, log Rollback
+        assertTrue(memberRepository.find(username).isPresent());
+        assertTrue(logRepository.find(username).isEmpty());
     }
 }
