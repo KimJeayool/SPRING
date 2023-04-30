@@ -55,4 +55,22 @@ class MemberServiceTest {
         assertTrue(logRepository.find(username).isEmpty());      // Rollback
     }
 
+
+    /**
+     * memberService        @Transactional : ON
+     * memberRepository     @Transactional : OFF
+     * logRepository        @Transactional : OFF
+     * */
+    @Test
+    void singleTx() {
+        // given
+        String username = "outerTxOff_success";
+
+        // When
+        memberService.joinV1(username);
+
+        // When: 모든 데이터가 정상 저장.
+        assertTrue(memberRepository.find(username).isPresent());
+        assertTrue(logRepository.find(username).isPresent());
+    }
 }
